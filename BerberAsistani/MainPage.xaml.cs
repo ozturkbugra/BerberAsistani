@@ -23,56 +23,76 @@ public partial class MainPage : ContentPage
         _viewModel.ListeyiYukle();
     }
 
-    private async void OnEkleClicked(object sender, EventArgs e)
+    // "+" Butonuna basınca çalışır: Paneli açar veya kapatır
+    private void OnPanelAcKapatClicked(object sender, EventArgs e)
     {
-        // 1. İsim İste
-        string ad = await DisplayPromptAsync("Yeni Randevu", "Müşteri Adı:");
-        if (string.IsNullOrWhiteSpace(ad)) return;
+        // Panel görünürse gizle, gizliyse göster (Tersi yap)
+        PnlYeniKayit.IsVisible = !PnlYeniKayit.IsVisible;
 
-        // 2. İşlem İste
-        string islem = await DisplayActionSheet("İşlem Seç", "İptal", null, "Saç", "Sakal", "Saç + Sakal", "Yıkama/Fön");
-        if (islem == "İptal" || islem == null) return;
-
-        // 3. Saat Seçtirme (Basitlik için TimePicker kullanamıyoruz, Prompt ile alalım veya özel ekran gerekir)
-        // Hızlı çözüm için kullanıcıya string olarak saat soruyoruz, sonra parse ediyoruz.
-        // Daha profesyoneli için özel popup yapılır ama şimdilik en hızlısı bu:
-
-        // Başlangıç Saati?
-        string saatStr = await DisplayPromptAsync("Saat Kaçta?", "Örn: 14:30", initialValue: DateTime.Now.ToString("HH:mm"));
-        if (!TimeSpan.TryParse(saatStr, out TimeSpan baslangicSaati))
+        if (PnlYeniKayit.IsVisible)
         {
-            await DisplayAlert("Hata", "Geçersiz saat formatı!", "Tamam");
+            // Panel açıldığında saati şimdiki saate ayarla ki kolaylık olsun
+            TmrBaslangic.Time = DateTime.Now.TimeOfDay;
+            EntAd.Focus(); // İmleci direkt isme odakla
+        }
+    }
+
+    private void OnIptalClicked(object sender, EventArgs e)
+    {
+        FormuTemizleVeKapat();
+    }
+
+    private async void OnKaydetClicked(object sender, EventArgs e)
+    {
+        // 1. Basit Kontroller (Ad veya işlem seçili değilse uyar)
+        if (string.IsNullOrWhiteSpace(EntAd.Text) || PickIslem.SelectedIndex == -1)
+        {
+            await DisplayAlert("Eksik Bilgi", "Lütfen müşteri adı ve yapılacak işlemi seçin.", "Tamam");
             return;
         }
 
-        // Kaç Dakika Sürecek?
-        string sureStr = await DisplayActionSheet("Ne Kadar Sürecek?", "İptal", null, "15 Dk", "30 Dk", "45 Dk", "60 Dk", "90 Dk");
-        if (sureStr == "İptal" || sureStr == null) return;
-        int dakika = int.Parse(sureStr.Split(' ')[0]); // "30 Dk" -> 30
+        // 2. SAAT VE TARİH HESAPLAMA (Hatanın Çıktığı Yer Burasıydı)
 
-        // Tarih ve Saati Birleştir
-        DateTime baslangicTarihi = _viewModel.SecilenTarih.Date + baslangicSaati;
-        DateTime bitisTarihi = baslangicTarihi.AddMinutes(dakika);
+        // TimePicker'dan saati alıyoruz (Örn: 14:30)
+        // Eğer Time null gelirse (imkansız ama derleyici korkuyor) 00:00 al diyoruz.
+        TimeSpan baslangicSaati = TmrBaslangic.Time ?? TimeSpan.Zero;
 
-        // ÇAKIŞMA KONTROLÜ
+
+        // Picker'dan süreyi alıyoruz (Örn: 30 dk)
+        int sure = (int)PickSure.SelectedItem;
+
+        // ViewModel'deki tarihi garantiye alıyoruz. 
+        // Derleyiciye diyoruz ki: "Korkma, bu tarih DateTime türünde, null değil."
+        DateTime islemGunu = _viewModel.SecilenTarih;
+
+        // Şimdi toplama işlemini yapıyoruz (Tarih + Saat)
+        DateTime baslangicTarihi = islemGunu.Date + baslangicSaati;
+
+        // Bitiş saatini hesaplıyoruz
+        DateTime bitisTarihi = baslangicTarihi.AddMinutes(sure);
+
+        // 3. ÇAKIŞMA KONTROLÜ
         bool cakismaVar = await _service.CakismaVarMi(baslangicTarihi, bitisTarihi);
         if (cakismaVar)
         {
-            await DisplayAlert("DOLU!", "Bu saat aralığında (veya bir kısmında) koltuk dolu. Lütfen başka saat seç.", "Tamam");
+            await DisplayAlert("Dolu!", "Seçtiğin saat aralığında koltuk dolu. Lütfen başka bir saat seç.", "Tamam");
             return;
         }
 
-        // Kaydet
+        // 4. KAYIT İŞLEMİ
         var yeni = new Randevu
         {
-            AdSoyad = ad,
-            Islem = islem,
+            AdSoyad = EntAd.Text,
+            Islem = PickIslem.SelectedItem.ToString(),
             Baslangic = baslangicTarihi,
             Bitis = bitisTarihi
         };
 
         await _service.AddRandevu(yeni);
-        _viewModel.ListeyiYukle();
+
+        // 5. TEMİZLİK
+        _viewModel.ListeyiYukle(); // Listeyi yenile
+        FormuTemizleVeKapat(); // Paneli kapat
     }
 
     private async void OnSilClicked(object sender, EventArgs e)
@@ -86,5 +106,12 @@ public partial class MainPage : ContentPage
             await _service.DeleteRandevu(randevu);
             _viewModel.ListeyiYukle();
         }
+    }
+
+    private void FormuTemizleVeKapat()
+    {
+        EntAd.Text = string.Empty;
+        PickIslem.SelectedIndex = -1;
+        PnlYeniKayit.IsVisible = false; // Paneli gizle
     }
 }

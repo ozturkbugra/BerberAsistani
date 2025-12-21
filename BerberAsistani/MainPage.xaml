@@ -1,70 +1,104 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="BerberAsistani.YeniRandevuPage"
-             Title="Yeni Randevu"
-             BackgroundColor="White">
+             x:Class="BerberAsistani.MainPage"
+             Title="Berber Defteri"
+             BackgroundColor="#F5F5F5">
 
-    <VerticalStackLayout Spacing="20" Padding="25" VerticalOptions="Center">
+    <Grid RowDefinitions="Auto, Auto, *">
 
-        <Label Text="Yeni Randevu Oluştur" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#2196F3"/>
-
-        <Frame Padding="5" BorderColor="Gray" CornerRadius="10">
-            <Entry x:Name="EntAd" Placeholder="Müşteri Adı Soyadı" FontSize="16" />
+        <Frame Grid.Row="0" Margin="10" Padding="10" BackgroundColor="White" CornerRadius="10" BorderColor="LightGray">
+            <DatePicker Date="{Binding SecilenTarih}" 
+                        Format="dd MMMM yyyy dddd" 
+                        TextColor="#2196F3" 
+                        HorizontalOptions="Center"
+                        FontAttributes="Bold"/>
         </Frame>
 
-        <Frame Padding="0" BorderColor="Gray" CornerRadius="10">
-            <Picker x:Name="PickIslem" Title="Yapılacak İşlem">
-                <Picker.ItemsSource>
-                    <x:Array Type="{x:Type x:String}">
-                        <x:String>Saç Kesimi</x:String>
-                        <x:String>Sakal Kesimi</x:String>
-                        <x:String>Saç + Sakal</x:String>
-                        <x:String>Çocuk Tıraşı</x:String>
-                        <x:String>Yıkama / Fön</x:String>
-                    </x:Array>
-                </Picker.ItemsSource>
-            </Picker>
-        </Frame>
+        <Border Grid.Row="1" x:Name="PnlYeniKayit" 
+                IsVisible="False"
+                Stroke="#2196F3" StrokeThickness="2"
+                StrokeShape="RoundRectangle 15"
+                BackgroundColor="White"
+                Margin="10,0,10,10" Padding="15">
 
-        <Grid ColumnDefinitions="*,*">
-            <VerticalStackLayout Grid.Column="0" Spacing="5" Margin="0,0,5,0">
-                <Label Text="Başlangıç Saati" TextColor="Gray"/>
-                <Frame Padding="0" BorderColor="#2196F3" CornerRadius="10">
-                    <TimePicker x:Name="TmrBaslangic" TextColor="#2196F3" FontAttributes="Bold" HorizontalOptions="Center"/>
-                </Frame>
-            </VerticalStackLayout>
+            <VerticalStackLayout Spacing="10">
+                <Label Text="✂️ Yeni Randevu" FontAttributes="Bold" TextColor="#2196F3" HorizontalOptions="Center"/>
 
-            <VerticalStackLayout Grid.Column="1" Spacing="5" Margin="5,0,0,0">
-                <Label Text="Süre (Dakika)" TextColor="Gray"/>
-                <Frame Padding="0" BorderColor="#2196F3" CornerRadius="10">
-                    <Picker x:Name="PickSure" SelectedIndex="1"> <Picker.ItemsSource>
+                <Entry x:Name="EntAd" Placeholder="Müşteri Adı" />
+
+                <Grid ColumnDefinitions="*, Auto">
+                    <Picker x:Name="PickIslem" Title="İşlem Seç" Grid.Column="0">
+                        <Picker.ItemsSource>
+                            <x:Array Type="{x:Type x:String}">
+                                <x:String>Saç Kesimi</x:String>
+                                <x:String>Sakal Kesimi</x:String>
+                                <x:String>Saç + Sakal</x:String>
+                                <x:String>Çocuk Tıraşı</x:String>
+                                <x:String>Bakım</x:String>
+                            </x:Array>
+                        </Picker.ItemsSource>
+                    </Picker>
+
+                    <Picker x:Name="PickSure" Title="Süre" SelectedIndex="1" Grid.Column="1" WidthRequest="100">
+                        <Picker.ItemsSource>
                             <x:Array Type="{x:Type x:Int32}">
                                 <x:Int32>15</x:Int32>
                                 <x:Int32>30</x:Int32>
                                 <x:Int32>45</x:Int32>
                                 <x:Int32>60</x:Int32>
-                                <x:Int32>90</x:Int32>
                             </x:Array>
                         </Picker.ItemsSource>
                     </Picker>
-                </Frame>
+                </Grid>
+
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                    <Label Text="Saat:" VerticalOptions="Center"/>
+                    <TimePicker x:Name="TmrBaslangic" 
+            Format="HH:mm" 
+            TextColor="Black" 
+            FontAttributes="Bold"/>
+                </HorizontalStackLayout>
+
+                <Grid ColumnDefinitions="*,*">
+                    <Button Grid.Column="0" Text="İptal" Clicked="OnIptalClicked" BackgroundColor="#FFCDD2" TextColor="Red" Margin="0,0,5,0"/>
+                    <Button Grid.Column="1" Text="Kaydet" Clicked="OnKaydetClicked" BackgroundColor="#2196F3" TextColor="White" Margin="5,0,0,0"/>
+                </Grid>
             </VerticalStackLayout>
-        </Grid>
+        </Border>
 
-        <Button Text="Randevuyu Kaydet" 
-                Clicked="OnKaydetClicked"
-                BackgroundColor="#2196F3" 
-                TextColor="White"
-                CornerRadius="25"
-                HeightRequest="50"
-                Margin="0,20,0,0"
-                FontAttributes="Bold" FontSize="18"/>
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Randevular}" Margin="10,0">
+            <CollectionView.EmptyView>
+                <Label Text="Bugün henüz kayıt yok." HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray"/>
+            </CollectionView.EmptyView>
 
-        <Button Text="Vazgeç" 
-                Clicked="OnIptalClicked"
-                BackgroundColor="Transparent" 
-                TextColor="Red"/>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Margin="0,5" Padding="10" CornerRadius="10" BorderColor="Transparent">
+                        <Grid ColumnDefinitions="Auto, *, Auto">
+                            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" WidthRequest="70">
+                                <Label Text="{Binding Baslangic, StringFormat='{0:HH:mm}'}" FontAttributes="Bold" TextColor="Black"/>
+                                <Label Text="{Binding Bitis, StringFormat='{0:HH:mm}'}" FontSize="12" TextColor="Gray"/>
+                            </VerticalStackLayout>
 
-    </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="{Binding AdSoyad}" FontAttributes="Bold" TextColor="#1565C0"/>
+                                <Label Text="{Binding Islem}" FontSize="12" TextColor="Gray"/>
+                            </VerticalStackLayout>
+
+                            <Button Grid.Column="2" Text="X" TextColor="Red" BackgroundColor="Transparent" 
+                                    Clicked="OnSilClicked" CommandParameter="{Binding .}"/>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="2" Text="+" FontSize="30" CornerRadius="30" WidthRequest="60" HeightRequest="60"
+                HorizontalOptions="End" VerticalOptions="End" Margin="20"
+                BackgroundColor="#2196F3" TextColor="White"
+                Clicked="OnPanelAcKapatClicked"
+                Shadow="{Shadow Brush=Black, Offset='2,2', Opacity=0.5}"/>
+
+    </Grid>
 </ContentPage>
